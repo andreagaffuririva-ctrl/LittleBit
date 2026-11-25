@@ -1,8 +1,13 @@
 # Plan: LittleBit-2 on Apple M1 (8 GB)
 
-See `changelog.md` for what is already done. Status at the end of session 1 (2026-11-25):
-the MPS port works end to end (train → save → eval). The smoke checkpoint is garbage (2 steps),
-and no real QAT run has been done yet.
+See `changelog.md` for what is already done.
+
+**Status (session 2, 2026-11-25):** `--eff_bit 0.55` was chosen. The FP baseline is done (PPL 15.43). The seqlen bug is fixed (11 s/step).
+A 1-epoch QAT run (1254 steps, ~4 h) followed by eval is running in the background via `nohup outputs/run_0p55.sh`:
+- progress: `outputs/train_0p55.log`; completion: `outputs/run_0p55.status`; eval results: `outputs/lb2_0p55_eval.log`
+- checkpoint: `outputs/smollm2-135m-lb2-0p55/`
+
+Steps 0 to 3 below are done. Steps 4 and 5 are what the running script does.
 
 ## Goal
 Reproduce the LittleBit-2 evaluation (wikitext2 PPL + zero-shot) on a small model:

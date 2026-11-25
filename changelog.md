@@ -58,6 +58,32 @@ For a hidden size of 576, the fixed cost of the fp16 scale vectors is larger tha
 | 0.7 | 0.688 | 80, 32, 128 | 62.7M |
 | 1.0 | 0.986 | 120, 48, 192 | 94.0M |
 
+## 2026-11-25: session 2 (run from phone via Remote Control)
+
+### Fixes
+- **Bug (session 1): `--train_seqlen` had no effect.** `get_wikitext2_train`, `get_c4_train` and `get_c4_wiki_train`
+  accepted `seqlen` but hardcoded `block_size = 2048`. They now use `block_size = seqlen` (the default 2048 is unchanged).
+  All session 1 runs and the first probe trained on 2048-token sequences, which explains the memory blow-up and the slow steps.
+  The mislabeled caches `wikitext2/d98c9be_seq512` and `_seq1024` were deleted and rebuilt (5015 × 512 tokens).
+- `quantization/functions/binary.py`: `y[y == 0] = 1` → `torch.where(y == 0, 1, y)` in `STEBinary` and `SmoothSign`.
+  The output is identical (checked on CPU and MPS, including ±0). The masked assignment forces a device sync on MPS (0.71 ms vs 0.17 ms per call).
+- `.claude/settings.json`: read-only Bash allowlist (from `/fewer-permission-prompts`).
+
+### Speed (SmolLM2-135M, 0.55 bpw, residual, batch 1 × grad-accum 4, seqlen 512, MPS fp32)
+- Before the fix (really 2048 tokens): 106 s/step. After the fix: **11 s/step** (about 2.8 s per 512-token micro-batch).
+
+### Results
+| Model | wikitext2 PPL (seqlen 2048) | piqa | arc_e | arc_c | winogrande | boolq | hellaswag |
+|---|---|---|---|---|---|---|---|
+| SmolLM2-135M FP32 (baseline) | **15.43** | 0.694 | 0.606 | 0.234 | 0.520 | 0.618 | 0.394 |
+| LittleBit-2 0.55 bpw, 1 epoch | _pending_ | | | | | | |
+
+Zero-shot: `acc`, 0-shot, `--limit 500` per task (acc_norm: piqa 0.700, arc_e 0.570, arc_c 0.272, hellaswag 0.442).
+
+### Observation
+SmolLM2 has very large hidden-state outliers (max |h| ≈ 2e4), so the layer-to-layer MSE term (`l2l_loss`, ×10)
+is about 5× larger than the KD term and dominates the loss. This is the same as the paper recipe, kept unchanged.
+
 ### Known quirks (not changed)
 - Importing `quantization.modules` directly causes a circular import. Import `quantization.utils` first.
 - `get_eval_loaders` forces `bos_token_id=1, eos_token_id=2` on the tokenizer (inherited from the Llama code).

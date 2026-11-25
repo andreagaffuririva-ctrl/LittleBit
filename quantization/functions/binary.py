@@ -6,7 +6,8 @@ class _STEBinary(torch.autograd.Function):
     def forward(ctx, x):
         ctx.save_for_backward(x)
         y = x.sign()
-        y[y == 0] = 1
+        # torch.where instead of y[y == 0] = 1: same result, but the masked assignment forces a device sync on MPS
+        y = torch.where(y == 0, torch.ones_like(y), y)
         return y
 
     @staticmethod
@@ -23,7 +24,8 @@ class _SmoothSign(torch.autograd.Function):
         ctx.alpha = alpha
         ctx.save_for_backward(x)
         y = x.sign()
-        y[y == 0] = 1
+        # torch.where instead of y[y == 0] = 1: same result, but the masked assignment forces a device sync on MPS
+        y = torch.where(y == 0, torch.ones_like(y), y)
         return y
 
     @staticmethod

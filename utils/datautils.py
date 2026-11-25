@@ -166,7 +166,7 @@ def get_wikitext2_train(tokenizer, seed=0, seqlen=2048):
         remove_columns=column_names,
     )
 
-    block_size = 2048
+    block_size = seqlen
 
     def group_texts(examples):
         # Concatenate all texts.
@@ -233,7 +233,7 @@ def get_c4_train(tokenizer, seed=0, seqlen=2048):
         remove_columns=column_names,
     )
 
-    block_size = 2048
+    block_size = seqlen
 
     def group_texts(examples):
         # Concatenate all texts.
@@ -317,7 +317,7 @@ def get_c4_wiki_train(tokenizer, seed=0, seqlen=2048):
         remove_columns=column_names,
     )
 
-    block_size = 2048
+    block_size = seqlen
 
     def group_texts(examples):
         # Concatenate all texts.
