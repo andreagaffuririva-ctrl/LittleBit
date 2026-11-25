@@ -2,12 +2,10 @@
 
 See `changelog.md` for what is already done.
 
-**Status (session 2, 2026-11-25):** `--eff_bit 0.55` was chosen. The FP baseline is done (PPL 15.43). The seqlen bug is fixed (11 s/step).
-A 1-epoch QAT run (1254 steps, ~4 h) followed by eval is running in the background via `nohup outputs/run_0p55.sh`:
-- progress: `outputs/train_0p55.log`; completion: `outputs/run_0p55.status`; eval results: `outputs/lb2_0p55_eval.log`
-- checkpoint: `outputs/smollm2-135m-lb2-0p55/`
-
-Steps 0 to 5 below are done. **Result:** wikitext2 PPL 2588 (FP: 15.43), zero-shot at chance. See `changelog.md`.
+**Status (end of session 2, 2026-11-25):** the MPS port works and the seqlen bug is fixed (11 s/step). FP baseline PPL 15.43.
+Four QAT runs are done (table below). The best is PPL 1036, far from the baseline, and zero-shot is at chance.
+The QAT experiments are **paused**. The next session starts by planning a new feature (not yet defined).
+The "Next experiments" list stays as a backlog. Note that `outputs/run_exp.sh` is git-ignored, so recreate it if `outputs/` is cleaned.
 
 ## Experiments done (300 steps each unless noted; details in `changelog.md`)
 | setting | PPL |

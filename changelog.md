@@ -123,6 +123,13 @@ helps, but it is not the main limit. The next suspects are the LR (4e-5 with cos
 `outputs/run_exp.sh <name> <extra main.py args>` runs train + eval for one experiment
 (logs: `outputs/train_<name>.log`, `outputs/eval_<name>.log`, status: `outputs/<name>.status`).
 
+### End of session 2 (2026-11-25, ~19:00)
+- No runs are active. Local checkpoints in `outputs/` (git-ignored, ~120 MB each): `smollm2-135m-lb2-0p55` (full epoch, default recipe),
+  `l2l0p1_300`, `lr2e4_300`, `bits1_300` (the best, PPL 1036), plus `smoke` and `probe` (throwaway; can be deleted).
+- Helper scripts (git-ignored, in `outputs/`): `run_exp.sh` (train + eval for one experiment), `queue_lr_bits.sh`, `run_0p55.sh`.
+- The session was driven from a phone via `/remote-control`, with `caffeinate -dims` keeping the Mac awake.
+- Decision: stop the QAT experiments here. The next session starts by planning a new feature.
+
 ### Known quirks (not changed)
 - Importing `quantization.modules` directly causes a circular import. Import `quantization.utils` first.
 - `get_eval_loaders` forces `bos_token_id=1, eos_token_id=2` on the tokenizer (inherited from the Llama code).
