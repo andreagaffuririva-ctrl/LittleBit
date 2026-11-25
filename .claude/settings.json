@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sysctl -n *)",
+      "Bash(sysctl vm.swapusage)",
+      "Bash(sw_vers)",
+      "Bash(sw_vers *)",
+      "Bash(uv pip list *)",
+      "Bash(uv pip show *)",
+      "Bash(ollama list)",
+      "Bash(colab sessions)",
+      "Bash(colab --help)"
+    ]
+  }
+}

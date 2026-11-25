@@ -70,8 +70,10 @@ def prepare_dataset(args, tokenizer):
 
     hash_key = re.sub(r"name_or_path=[^,]+,?\s*", "", text)
 
+    seqlen = getattr(args, "train_seqlen", 2048)
     hash_value = hashlib.sha256(hash_key.encode()).hexdigest()[:7]
-    dataset = os.path.join(args.data_root, args.dataset, hash_value)
+    # Keep the original cache path for the default seqlen
+    dataset = os.path.join(args.data_root, args.dataset, hash_value if seqlen == 2048 else f"{hash_value}_seq{seqlen}")
 
     logger.info(f"Attempting to load dataset from disk at '{dataset}'")
     try:
@@ -80,7 +82,7 @@ def prepare_dataset(args, tokenizer):
     except (FileNotFoundError, OSError) as e:
         logger.warning(f"Failed to load dataset from disk at '{dataset}': {e}")
         logger.info("Generating new dataset using get_qat_dataset")
-        datasets = get_qat_dataset(args.dataset, tokenizer)
+        datasets = get_qat_dataset(args.dataset, tokenizer, seqlen=seqlen)
         datasets.save_to_disk(dataset)
         logger.info(f"Dataset saved to disk at '{dataset}'")
         with open(os.path.join(dataset, "tokenizer_info"), "w") as f:
@@ -101,13 +103,13 @@ def load_tokenizer(model_id):
     return tokenizer
 
 
-def get_qat_dataset(name, tokenizer):
+def get_qat_dataset(name, tokenizer, seqlen=2048):
     if name == "wikitext2":
-        data = get_wikitext2_train(tokenizer=tokenizer)
+        data = get_wikitext2_train(tokenizer=tokenizer, seqlen=seqlen)
     elif name == "c4":
-        data = get_c4_train(tokenizer=tokenizer)
+        data = get_c4_train(tokenizer=tokenizer, seqlen=seqlen)
     elif name == "c4_wiki":
-        data = get_c4_wiki_train(tokenizer=tokenizer)
+        data = get_c4_wiki_train(tokenizer=tokenizer, seqlen=seqlen)
     return data
 
 
@@ -164,7 +166,7 @@ def get_wikitext2_train(tokenizer, seed=0, seqlen=2048):
         remove_columns=column_names,
     )
 
-    block_size = 2048
+    block_size = seqlen
 
     def group_texts(examples):
         # Concatenate all texts.
@@ -231,7 +233,7 @@ def get_c4_train(tokenizer, seed=0, seqlen=2048):
         remove_columns=column_names,
     )
 
-    block_size = 2048
+    block_size = seqlen
 
     def group_texts(examples):
         # Concatenate all texts.
@@ -315,7 +317,7 @@ def get_c4_wiki_train(tokenizer, seed=0, seqlen=2048):
         remove_columns=column_names,
     )
 
-    block_size = 2048
+    block_size = seqlen
 
     def group_texts(examples):
         # Concatenate all texts.

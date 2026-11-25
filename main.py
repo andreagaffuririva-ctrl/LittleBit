@@ -6,7 +6,6 @@ import json
 import os
 from pathlib import Path
 
-import deepspeed
 import torch
 import torch.nn as nn
 from datasets import load_from_disk
@@ -26,6 +25,9 @@ logger = setup_logger(__name__)
 def get_device_config():
     num_gpus = torch.cuda.device_count()
     if num_gpus == 0:
+        # Apple Silicon: single MPS device, no DeepSpeed
+        if torch.backends.mps.is_available():
+            return 1, "mps"
         return None, None
 
     # "auto" is not a valid argument for model.to(), so default to a single device.
@@ -71,7 +73,9 @@ def get_args():
     parser.add_argument("--ds_config_path", type=str, default=None)
     parser.add_argument("--exp_name", type=str, default="LittleBit")
     parser.add_argument("--run_name", type=str, default="my_run")
-    parser.add_argument("--report", nargs="+", default=["wandb"], choices=["wandb", "tensorboard"])
+    parser.add_argument("--report", nargs="+", default=["wandb"], choices=["wandb", "tensorboard", "none"])
+    parser.add_argument("--max_steps", type=int, default=-1, help="Overrides num_train_epochs when > 0")
+    parser.add_argument("--train_seqlen", type=int, default=2048)
     parser.add_argument("--quant_func", type=str, default="STEBinary")
     parser.add_argument("--quant_mod", type=str, default="LittleBitLinear")
 
@@ -105,7 +109,8 @@ def get_training_arguments(args, save_dir):
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         warmup_ratio=args.warmup_ratio,
         num_train_epochs=args.num_train_epochs,
-        bf16=True,
+        bf16=torch.cuda.is_available(),
+        max_steps=args.max_steps,
         logging_steps=1,
         save_strategy="no",
         save_steps=10000,
@@ -142,7 +147,18 @@ def load_student_model(args, device_map, torch_dtype):
     return model
 
 
-def load_teacher_model(args, num_gpus, torch_dtype, config_path="configs/zero3_inference.json"):
+def load_teacher_model(args, num_gpus, torch_dtype, config_path="configs/zero3_inference.json", device_map=None):
+    if args.ds_config_path is None and not torch.cuda.is_available():
+        # No CUDA (e.g. Apple MPS / CPU): plain PyTorch teacher, no DeepSpeed
+        teacher_model = AutoModelForCausalLM.from_pretrained(args.model_id, torch_dtype=torch_dtype)
+        teacher_model.eval()
+        for param in teacher_model.parameters():
+            param.requires_grad = False
+        teacher_model.config.use_cache = False
+        return teacher_model.to(device_map or "cpu")
+
+    import deepspeed
+
     with open(config_path, 'r') as f:
         config = json.load(f)
 
@@ -209,11 +225,14 @@ def main():
     logger.info(f"Preparing training data ({args.dataset})...")
     datasets = prepare_dataset(args, tokenizer)
 
+    # bf16 on CUDA as before; fp32 elsewhere (MPS bf16 is unreliable on M1, fp16 can overflow)
+    torch_dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+
     logger.info("Loading student model...")
-    model = load_student_model(args, device_map, torch.bfloat16)
+    model = load_student_model(args, device_map, torch_dtype)
 
     logger.info(f"Loading teacher model...")
-    teacher_model = load_teacher_model(args, num_gpus, torch.bfloat16)
+    teacher_model = load_teacher_model(args, num_gpus, torch_dtype, device_map=device_map)
 
     training_args = get_training_arguments(args, save_dir)
 
@@ -240,6 +259,7 @@ def save_artifacts(trainer, model, tokenizer, save_dir, args):
         final_cpu_state_dict = {}
 
         if use_ds:
+            import deepspeed
             logger.info("DeepSpeed ZeRO-3 enabled. Gathering parameters in groups...")
 
             LAYER_CHUNK_SIZE = 4
