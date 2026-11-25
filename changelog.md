@@ -76,9 +76,22 @@ For a hidden size of 576, the fixed cost of the fp16 scale vectors is larger tha
 | Model | wikitext2 PPL (seqlen 2048) | piqa | arc_e | arc_c | winogrande | boolq | hellaswag |
 |---|---|---|---|---|---|---|---|
 | SmolLM2-135M FP32 (baseline) | **15.43** | 0.694 | 0.606 | 0.234 | 0.520 | 0.618 | 0.394 |
-| LittleBit-2 0.55 bpw, 1 epoch | _pending_ | | | | | | |
+| LittleBit-2 0.55 bpw, 1 epoch | 2588.3 | 0.510 | 0.256 | 0.190 | 0.522 | 0.368 | 0.280 |
 
-Zero-shot: `acc`, 0-shot, `--limit 500` per task (acc_norm: piqa 0.700, arc_e 0.570, arc_c 0.272, hellaswag 0.442).
+Zero-shot: `acc`, 0-shot, `--limit 500` per task (acc_norm: FP piqa 0.700, arc_e 0.570, arc_c 0.272, hellaswag 0.442;
+LittleBit-2 piqa 0.502, arc_e 0.264, arc_c 0.228, hellaswag 0.256). The LittleBit-2 zero-shot scores are at chance level.
+
+QAT run: 1253 steps (1 epoch of wikitext2 train, 5015 × 512 tokens ≈ 2.6M tokens), 3.5 h on MPS, lr 4e-5 cosine,
+ITQ 50 iterations, residual. Loss components per tenth of training:
+
+| tenth | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| l2l (MSE ×10) | 242.9k | 181.1k | 152.9k | 119.6k | 94.8k | 79.9k | 66.5k | 62.6k | 64.5k | 57.0k |
+| KD (nats/token) | 7.10 | 5.60 | 5.41 | 5.25 | 5.09 | 4.93 | 4.89 | 4.82 | 4.84 | 4.80 |
+
+The l2l term fell 4×, but the KD term flattened at about 4.8 nats/token. The student learns to match the teacher's hidden-state
+outliers but not its output distribution. The model is far from usable: the paper's settings use much larger models,
+far more tokens, and 5 epochs.
 
 ### Observation
 SmolLM2 has very large hidden-state outliers (max |h| ≈ 2e4), so the layer-to-layer MSE term (`l2l_loss`, ×10)
