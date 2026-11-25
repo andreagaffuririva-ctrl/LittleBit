@@ -107,6 +107,19 @@ KD now drives training (l2l ≈ 2.2k vs KD ≈ 2.4k per sequence). The run reach
 KD still plateaus at ~4.7 nats/token after about 40% of the run, and zero-shot stays at chance level. Rebalancing
 helps, but it is not the main limit. The next suspects are the LR (4e-5 with cosine decay) and capacity (0.55 bpw at 135M).
 
+### Experiments 2 and 3: learning rate and bit budget (300 steps, `--l2l_loss_scale 0.1`; queued with `outputs/queue_lr_bits.sh`)
+| Run | eff_bit | lr | PPL | piqa | arc_e | arc_c | wino | boolq | hella | KD at end (nats/token) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| l2l0p1_300 | 0.55 | 4e-5 | 2177.5 | 0.532 | 0.240 | 0.212 | 0.498 | 0.370 | 0.280 | 4.69 (flat) |
+| lr2e4_300 | 0.55 | 2e-4 | 1136.1 | 0.532 | 0.238 | 0.190 | 0.498 | 0.370 | 0.284 | ~4.0 (falling) |
+| bits1_300 | 1.0 | 2e-4 | **1036.5** | 0.532 | 0.238 | 0.194 | 0.512 | 0.370 | 0.288 | ~3.9 (falling) |
+
+- **The LR was a real limit:** 5× the LR halves the PPL, and KD no longer plateaus.
+- **Capacity is a small factor at this budget:** 1.0 bpw (about 2× the rank) gives only 9% better PPL than 0.55 bpw, at 1.1× the step time
+  (12.2 vs 11 s/step) and ~5.2 GB peak RSS (swap 3 GB, stable).
+- **The training budget is now the main limit:** KD is still falling at the end of both 2e-4 runs.
+- Zero-shot stays at chance in all runs. It cannot move while PPL is about 70× the FP baseline.
+
 `outputs/run_exp.sh <name> <extra main.py args>` runs train + eval for one experiment
 (logs: `outputs/train_<name>.log`, `outputs/eval_<name>.log`, status: `outputs/<name>.status`).
 

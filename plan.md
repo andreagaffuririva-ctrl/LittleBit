@@ -9,15 +9,22 @@ A 1-epoch QAT run (1254 steps, ~4 h) followed by eval is running in the backgrou
 
 Steps 0 to 5 below are done. **Result:** wikitext2 PPL 2588 (FP: 15.43), zero-shot at chance. See `changelog.md`.
 
-## Next experiments (ranked; each is about 3.5 h per epoch at 11 s/step)
-1. ~~**Rebalance the loss:**~~ DONE (PPL 2588 → 2177 in 300 steps; keep `--l2l_loss_scale 0.1`). `--l2l_loss_scale 0.1` (or 0). The l2l term is ~5× the KD term because of SmolLM2's
-   hidden-state outliers, and KD stopped improving. This is the cheapest change and the most likely to help.
-2. **Higher LR for the short run:** `--lr 2e-4`. 4e-5 is tuned for 5 epochs on large data.
-3. **More bits:** `--eff_bit 1.0` with `--train_seqlen 512` (now affordable after the seqlen fix). Check memory with a 10-step probe first.
-4. **More data:** `--dataset c4_wiki` (downloads one C4 shard) and/or 2 to 3 epochs. Run it overnight.
-5. **Ablation:** `--use_itq False` with the best setting, to measure what LittleBit-2 adds.
+## Experiments done (300 steps each unless noted; details in `changelog.md`)
+| setting | PPL |
+|---|---|
+| default (l2l 10, lr 4e-5), full epoch | 2588 |
+| l2l 0.1, lr 4e-5 | 2177 |
+| l2l 0.1, lr 2e-4 | 1136 |
+| l2l 0.1, lr 2e-4, **1.0 bpw** | **1036** |
 
-Tip: use `--max_steps 300` for quick comparisons between settings (~1 h each), then run the best one for a full epoch.
+Best recipe so far: `--l2l_loss_scale 0.1 --lr 2e-4`. KD is still falling at 300 steps, so the training budget is the main limit.
+
+## Next experiments (ranked)
+1. **Full epoch with the best recipe** (0.55 bpw, ~3.5 h): `outputs/run_exp.sh lb2_0p55_best --num_train_epochs 1 --l2l_loss_scale 0.1 --lr 2e-4`.
+   Use 1.0 bpw instead (`--eff_bit 1.0`, ~4 h) if the goal is the lowest PPL. 0.55 bpw is the more interesting sub-1-bit point.
+2. **Higher LR probe:** `--lr 5e-4`, 300 steps (~1 h). Check whether 2e-4 is still too low.
+3. **More data:** `--dataset c4_wiki` (one C4 shard) and/or 2 to 3 epochs. Run it overnight.
+4. **Ablation:** `--use_itq False` with the best setting, to measure what LittleBit-2 adds.
 
 ## Goal
 Reproduce the LittleBit-2 evaluation (wikitext2 PPL + zero-shot) on a small model:
