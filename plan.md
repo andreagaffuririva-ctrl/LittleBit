@@ -10,7 +10,7 @@ A 1-epoch QAT run (1254 steps, ~4 h) followed by eval is running in the backgrou
 Steps 0 to 5 below are done. **Result:** wikitext2 PPL 2588 (FP: 15.43), zero-shot at chance. See `changelog.md`.
 
 ## Next experiments (ranked; each is about 3.5 h per epoch at 11 s/step)
-1. **Rebalance the loss:** `--l2l_loss_scale 0.1` (or 0). The l2l term is ~5× the KD term because of SmolLM2's
+1. ~~**Rebalance the loss:**~~ DONE (PPL 2588 → 2177 in 300 steps; keep `--l2l_loss_scale 0.1`). `--l2l_loss_scale 0.1` (or 0). The l2l term is ~5× the KD term because of SmolLM2's
    hidden-state outliers, and KD stopped improving. This is the cheapest change and the most likely to help.
 2. **Higher LR for the short run:** `--lr 2e-4`. 4e-5 is tuned for 5 epochs on large data.
 3. **More bits:** `--eff_bit 1.0` with `--train_seqlen 512` (now affordable after the seqlen fix). Check memory with a 10-step probe first.

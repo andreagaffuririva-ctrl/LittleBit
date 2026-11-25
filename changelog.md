@@ -97,6 +97,19 @@ far more tokens, and 5 epochs.
 SmolLM2 has very large hidden-state outliers (max |h| ≈ 2e4), so the layer-to-layer MSE term (`l2l_loss`, ×10)
 is about 5× larger than the KD term and dominates the loss. This is the same as the paper recipe, kept unchanged.
 
+### Experiment 1: `--l2l_loss_scale 0.1`, 300 steps (`outputs/run_exp.sh l2l0p1_300 --max_steps 300 --l2l_loss_scale 0.1`)
+| Run | steps | PPL | piqa | arc_e | arc_c | wino | boolq | hella | final KD nats/token |
+|---|---|---|---|---|---|---|---|---|---|
+| l2l scale 10 (default) | 1253 | 2588.3 | 0.510 | 0.256 | 0.190 | 0.522 | 0.368 | 0.280 | 4.80 |
+| l2l scale 0.1 | 300 | **2177.5** | 0.532 | 0.240 | 0.212 | 0.498 | 0.370 | 0.280 | 4.69 |
+
+KD now drives training (l2l ≈ 2.2k vs KD ≈ 2.4k per sequence). The run reaches a better PPL with 4× fewer steps, but
+KD still plateaus at ~4.7 nats/token after about 40% of the run, and zero-shot stays at chance level. Rebalancing
+helps, but it is not the main limit. The next suspects are the LR (4e-5 with cosine decay) and capacity (0.55 bpw at 135M).
+
+`outputs/run_exp.sh <name> <extra main.py args>` runs train + eval for one experiment
+(logs: `outputs/train_<name>.log`, `outputs/eval_<name>.log`, status: `outputs/<name>.status`).
+
 ### Known quirks (not changed)
 - Importing `quantization.modules` directly causes a circular import. Import `quantization.utils` first.
 - `get_eval_loaders` forces `bos_token_id=1, eos_token_id=2` on the tokenizer (inherited from the Llama code).
