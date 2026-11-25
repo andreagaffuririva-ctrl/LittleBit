@@ -21,6 +21,8 @@ outputs
 wandb
 *.pkl
 c4_wiki
+wikitext2/
+c4/
 ckpts/
 scripts/
 .cache/

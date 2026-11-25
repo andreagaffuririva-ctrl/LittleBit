@@ -384,7 +384,12 @@ def load_quantized_model(model_path: str, quant_args, torch_dtype, device: str =
 
     # 5. Move to device
     if device == "auto":
-        target_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            target_device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            target_device = torch.device("mps")
+        else:
+            target_device = torch.device("cpu")
     else:
         target_device = torch.device(device)
 

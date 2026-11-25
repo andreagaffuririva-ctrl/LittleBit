@@ -179,8 +179,8 @@ def main(args):
         accelerator = None
         # If not already on GPU (from_pretrained might have put it there via device="auto"), move it.
         device = next(model.parameters()).device
-        if device.type == 'cpu' and torch.cuda.is_available():
-            target_device = torch.device("cuda")
+        if device.type == 'cpu' and (torch.cuda.is_available() or torch.backends.mps.is_available()):
+            target_device = torch.device("cuda" if torch.cuda.is_available() else "mps")
             model.to(target_device)
             print(f"Model moved to {target_device}")
 
